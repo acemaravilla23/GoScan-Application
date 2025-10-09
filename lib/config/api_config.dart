@@ -4,7 +4,7 @@ class ApiConfig {
   // ========================================
   
   // Your computer's IP address (change this when you switch networks)
-  static const String serverIp = '192.168.1.3';
+  static const String serverIp = '10.126.147.176';
   
   // Laravel server port (usually 8000 for 'php artisan serve' or check your composer run dev port)
   static const String serverPort = '8000';
