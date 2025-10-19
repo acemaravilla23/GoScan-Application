@@ -58,13 +58,40 @@ class _ToSubmitScreenState extends State<ToSubmitScreen> {
   }
 
   bool _checkIfHasRenewalRequirements() {
-    if (_requirementsStatus == null) return false;
+    if (_requirementsStatus == null) {
+      print('Requirements status is null');
+      return false;
+    }
     
-    // Check if any renewal folder has data
-    return _requirementsStatus!['renewal_folder1'] != null ||
-           _requirementsStatus!['renewal_folder2'] != null ||
-           _requirementsStatus!['renewal_folder3'] != null ||
-           _requirementsStatus!['renewal_folder4'] != null;
+    print('=== CHECKING REQUIREMENTS ===');
+    print('Full response: ${_requirementsStatus}');
+    
+    // Check for both application requirements (1st availment) and renewal requirements (2nd/3rd/4th availment)
+    final hasRenewalFolder1 = _requirementsStatus!['renewal_folder1'] != null;
+    final hasRenewalFolder2 = _requirementsStatus!['renewal_folder2'] != null;
+    final hasRenewalFolder3 = _requirementsStatus!['renewal_folder3'] != null;
+    final hasRenewalFolder4 = _requirementsStatus!['renewal_folder4'] != null;
+    
+    final hasAppFolder1 = _requirementsStatus!['folder1'] != null;
+    final hasAppFolder2 = _requirementsStatus!['folder2'] != null;
+    final hasAppFolder3 = _requirementsStatus!['folder3'] != null;
+    final hasAppFolder4 = _requirementsStatus!['folder4'] != null;
+    
+    final totalRequirements = _requirementsStatus!['total_requirements'] ?? 0;
+    final hasApplication = _requirementsStatus!['has_application'] ?? false;
+    
+    print('Renewal folders: folder1: $hasRenewalFolder1, folder2: $hasRenewalFolder2, folder3: $hasRenewalFolder3, folder4: $hasRenewalFolder4');
+    print('App folders: folder1: $hasAppFolder1, folder2: $hasAppFolder2, folder3: $hasAppFolder3, folder4: $hasAppFolder4');
+    print('total_requirements: $totalRequirements, has_application: $hasApplication');
+    
+    // Check if any folder has data OR if total_requirements > 0 OR if has_application is true
+    final hasRenewalRequirements = hasRenewalFolder1 || hasRenewalFolder2 || hasRenewalFolder3 || hasRenewalFolder4;
+    final hasAppRequirements = hasAppFolder1 || hasAppFolder2 || hasAppFolder3 || hasAppFolder4;
+    final hasRequirements = hasRenewalRequirements || hasAppRequirements || totalRequirements > 0 || hasApplication;
+    
+    print('Has requirements: $hasRequirements (renewal: $hasRenewalRequirements, app: $hasAppRequirements, total: $totalRequirements, has_app: $hasApplication)');
+    
+    return hasRequirements;
   }
 
   Future<void> _downloadDocument(Future<bool> Function() downloadFunction, String documentName) async {
@@ -141,22 +168,26 @@ class _ToSubmitScreenState extends State<ToSubmitScreen> {
       return false;
     }
     
-    // Map folder titles to database keys (renewal folders for scholars)
+    // Map folder titles to database keys (handle both application and renewal folders)
     String folderKey;
     if (folderTitle.contains('Folder 1')) {
-      folderKey = 'renewal_folder1';
+      // Try renewal folder first, then application folder
+      folderKey = _requirementsStatus!['renewal_folder1'] != null ? 'renewal_folder1' : 'folder1';
     } else if (folderTitle.contains('Folder 2')) {
-      folderKey = 'renewal_folder2';
+      folderKey = _requirementsStatus!['renewal_folder2'] != null ? 'renewal_folder2' : 'folder2';
     } else if (folderTitle.contains('Folder 3')) {
-      folderKey = 'renewal_folder3';
+      folderKey = _requirementsStatus!['renewal_folder3'] != null ? 'renewal_folder3' : 'folder3';
     } else if (folderTitle.contains('Folder 4')) {
-      folderKey = 'renewal_folder4';
+      folderKey = _requirementsStatus!['renewal_folder4'] != null ? 'renewal_folder4' : 'folder4';
     } else {
       return false;
     }
 
     final folderData = _requirementsStatus![folderKey] as Map<String, dynamic>?;
-    if (folderData == null) return false;
+    if (folderData == null) {
+      print('No data found for folder: $folderKey');
+      return false;
+    }
 
     // Map requirement names to database field names
     String fieldName;
@@ -229,8 +260,8 @@ class _ToSubmitScreenState extends State<ToSubmitScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _hasRenewalRequirements 
-                          ? 'Required documents for your scholarship renewal.'
-                          : 'Required documents for your scholarship renewal.',
+                          ? 'Required documents for your SPES renewal.'
+                          : 'Required documents for your SPES renewal.',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 16,

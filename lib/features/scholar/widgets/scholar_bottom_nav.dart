@@ -55,9 +55,9 @@ class ScholarBottomNav extends StatelessWidget {
                 index: 3,
               ),
               _buildNavItem(
-                icon: Icons.attach_money_outlined,
-                activeIcon: Icons.attach_money,
-                label: 'Allowance',
+                icon: Icons.work_outline,
+                activeIcon: Icons.work,
+                label: 'Deployment',
                 index: 4,
               ),
             ],
@@ -123,7 +123,7 @@ class ScholarBottomNav extends StatelessWidget {
               label,
               style: TextStyle(
                 fontFamily: 'Poppins',
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 color: isActive ? const Color(0xFF2563EB) : Colors.grey[600],
               ),

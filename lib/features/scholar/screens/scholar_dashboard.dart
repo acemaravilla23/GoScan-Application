@@ -5,7 +5,7 @@ import 'dashboard_screen.dart';
 import 'tosubmit_screen.dart';
 import 'goscan_screen.dart';
 import 'availment_screen.dart';
-import 'allowance_screen.dart';
+import 'deployment_screen.dart';
 import 'scholar_settings_screen.dart';
 import '../../../services/auth_service.dart';
 
@@ -40,7 +40,7 @@ class _ScholarDashboardState extends State<ScholarDashboard> {
     const ToSubmitScreen(),
     const GoScanScreen(),
     const AvailmentScreen(),
-    const AllowanceScreen(),
+    const DeploymentScreen(),
   ];
 
   @override

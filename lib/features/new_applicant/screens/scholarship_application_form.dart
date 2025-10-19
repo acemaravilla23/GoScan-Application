@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../services/scholarship_service.dart';
+import '../../../services/spes_service.dart';
 import '../../../services/auth_service.dart';
 import '../screens/new_applicant_dashboard.dart';
 
 class ScholarshipApplicationForm extends StatefulWidget {
-  const ScholarshipApplicationForm({super.key});
+  final String? selectedDistrict;
+  
+  const ScholarshipApplicationForm({super.key, this.selectedDistrict});
 
   @override
   State<ScholarshipApplicationForm> createState() => _ScholarshipApplicationFormState();
@@ -30,13 +32,22 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
   final _suffixController = TextEditingController();
   final _ageController = TextEditingController();
   final _birthdateController = TextEditingController();
+  final _citizenshipController = TextEditingController(text: 'Filipino');
+  final _birthplaceController = TextEditingController(text: 'Bay Laguna');
   final _skillsController = TextEditingController();
   String _selectedSex = 'Male';
   String _selectedCivilStatus = 'Single';
   String _selectedClassification = 'College';
   String _selectedSuffix = '';
-  String _selectedRelationship = 'Father';
   String _selectedBeneficiaryStatus = 'Living together';
+  String _selectedGsisBeneficiary = 'Father';
+  
+  // GSIS Beneficiary Controllers (only used when Guardian is selected)
+  final _gsisBeneficiaryFirstNameController = TextEditingController();
+  final _gsisBeneficiaryMiddleNameController = TextEditingController();
+  final _gsisBeneficiaryLastNameController = TextEditingController();
+  final _gsisBeneficiarySuffixController = TextEditingController();
+  String _selectedGsisRelationship = 'Father';
   
   // Education dropdown selections
   String _selectedSecondaryDegree = 'High School Graduate';
@@ -57,8 +68,6 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
   final _socmedNameController = TextEditingController();
 
   // Family Information Controllers
-  final _gsisBeneficiaryController = TextEditingController();
-  final _gsisRelationshipController = TextEditingController();
   final _beneficiaryStatusController = TextEditingController();
   final _motherFirstNameController = TextEditingController();
   final _motherMiddleNameController = TextEditingController();
@@ -154,9 +163,11 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
     _phoneController.dispose();
     _socmedController.dispose();
     _socmedNameController.dispose();
-    _gsisBeneficiaryController.dispose();
-    _gsisRelationshipController.dispose();
     _beneficiaryStatusController.dispose();
+    _gsisBeneficiaryFirstNameController.dispose();
+    _gsisBeneficiaryMiddleNameController.dispose();
+    _gsisBeneficiaryLastNameController.dispose();
+    _gsisBeneficiarySuffixController.dispose();
     _motherFirstNameController.dispose();   
     _motherMiddleNameController.dispose();
     _motherLastNameController.dispose();
@@ -201,7 +212,7 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Scholarship Application',
+          'SPES Application',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontSize: 18,
@@ -411,8 +422,11 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
         'sex': _selectedSex,        
         'birthdate': _birthdateController.text.trim(), // Format: YYYY-MM-DD
         'age': _calculateAge(),
+        'birthplace': _birthplaceController.text.trim(),
+        'citizenship': _citizenshipController.text.trim(),
         'civil_status': _selectedCivilStatus,
         'classification': _selectedClassification,
+        'district': widget.selectedDistrict ?? 'Provincial', // Use the district from button clicked
         'skills': _skillsController.text.trim().isEmpty ? null : _skillsController.text.trim(),
 
         // Contact & Address
@@ -428,8 +442,11 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
         'socmed_name': _socmedNameController.text.trim(),
 
         // Family Information
-        'gsis_beneficiary': _gsisBeneficiaryController.text.trim(),
-        'gsis_relationship': _selectedRelationship,
+        'gsis_firstname': _getGsisFirstName(),
+        'gsis_middle': _getGsisMiddleName(),
+        'gsis_lastname': _getGsisLastName(),
+        'gsis_suffix': _getGsisSuffix(),
+        'gsis_relationship': _getGsisRelationship(),
         'beneficiary_status': _selectedBeneficiaryStatus,
         'mother_firstname': _motherFirstNameController.text.trim(),        
         'mother_middle': _motherMiddleNameController.text.trim().isEmpty ? null : _motherMiddleNameController.text.trim(),
@@ -475,7 +492,7 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
       });
       print('===============================');
       
-      final result = await ScholarshipService.submitApplication(applicationData);
+      final result = await SpesService.submitApplication(applicationData);
 
       if (mounted) {
         setState(() {
@@ -571,6 +588,57 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
         // Debug: Log the age calculation
         print('Birthdate: ${_birthdateController.text}, Age: $age (${age.runtimeType})');
       });
+    }
+  }
+
+  // GSIS Beneficiary Helper Methods
+  String _getGsisFirstName() {
+    if (_selectedGsisBeneficiary == 'Father') {
+      return _fatherFirstNameController.text.trim();
+    } else if (_selectedGsisBeneficiary == 'Mother') {
+      return _motherFirstNameController.text.trim();
+    } else {
+      return _gsisBeneficiaryFirstNameController.text.trim();
+    }
+  }
+
+  String? _getGsisMiddleName() {
+    if (_selectedGsisBeneficiary == 'Father') {
+      return _fatherMiddleNameController.text.trim().isEmpty ? null : _fatherMiddleNameController.text.trim();
+    } else if (_selectedGsisBeneficiary == 'Mother') {
+      return _motherMiddleNameController.text.trim().isEmpty ? null : _motherMiddleNameController.text.trim();
+    } else {
+      return _gsisBeneficiaryMiddleNameController.text.trim().isEmpty ? null : _gsisBeneficiaryMiddleNameController.text.trim();
+    }
+  }
+
+  String _getGsisLastName() {
+    if (_selectedGsisBeneficiary == 'Father') {
+      return _fatherLastNameController.text.trim();
+    } else if (_selectedGsisBeneficiary == 'Mother') {
+      return _motherLastNameController.text.trim();
+    } else {
+      return _gsisBeneficiaryLastNameController.text.trim();
+    }
+  }
+
+  String? _getGsisSuffix() {
+    if (_selectedGsisBeneficiary == 'Father') {
+      return _fatherSuffixController.text.trim().isEmpty || _fatherSuffixController.text.trim() == 'None' ? null : _fatherSuffixController.text.trim();
+    } else if (_selectedGsisBeneficiary == 'Mother') {
+      return _motherSuffixController.text.trim().isEmpty || _motherSuffixController.text.trim() == 'None' ? null : _motherSuffixController.text.trim();
+    } else {
+      return _gsisBeneficiarySuffixController.text.trim().isEmpty || _gsisBeneficiarySuffixController.text.trim() == 'None' ? null : _gsisBeneficiarySuffixController.text.trim();
+    }
+  }
+
+  String _getGsisRelationship() {
+    if (_selectedGsisBeneficiary == 'Father') {
+      return 'Father';
+    } else if (_selectedGsisBeneficiary == 'Mother') {
+      return 'Mother';
+    } else {
+      return _selectedGsisRelationship;
     }
   }
 
@@ -792,6 +860,36 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // Citizenship Field
+            _buildTextFormField(
+              controller: _citizenshipController,
+              label: 'Citizenship',
+              hint: 'Enter your citizenship',
+              isRequired: true,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Citizenship is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Birthplace Field
+            _buildTextFormField(
+              controller: _birthplaceController,
+              label: 'Birthplace',
+              hint: 'Enter your birthplace',
+              isRequired: true,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Birthplace is required';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
                        
@@ -1043,25 +1141,126 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
             ),
             const SizedBox(height: 12),
             
-            _buildTextFormField(
-              controller: _gsisBeneficiaryController,
-              label: 'GSIS Beneficiary Name',
-              hint: 'Full name of GSIS beneficiary',
-              isRequired: true,
-              textCapitalization: TextCapitalization.words,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.-]')),
-                LengthLimitingTextInputFormatter(200),
-              ],
+            // GSIS Beneficiary Selection
+            _buildDropdownField(
+              label: 'GSIS Beneficiary',
+              value: _selectedGsisBeneficiary,
+              items: ['Father', 'Mother', 'Guardian'],
+              onChanged: (value) => setState(() => _selectedGsisBeneficiary = value!),
             ),
             const SizedBox(height: 16),
             
-            _buildDropdownField(
-              label: 'Relationship to Beneficiary',
-              value: _selectedRelationship,
-              items: ['Father', 'Mother', 'Grandfather', 'Grandmother', 'Brother', 'Sister', 'Friend', 'Colleague', 'Spouse', 'Partner'],
-              onChanged: (value) => setState(() => _selectedRelationship = value!),
-            ),
+            // Show GSIS beneficiary info based on selection
+            if (_selectedGsisBeneficiary == 'Father') ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'GSIS Beneficiary will be set to Father information above',
+                        style: TextStyle(
+                          color: Colors.blue[800],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (_selectedGsisBeneficiary == 'Mother') ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.pink[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.pink[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.pink[600], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'GSIS Beneficiary will be set to Mother information above',
+                        style: TextStyle(
+                          color: Colors.pink[800],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // Guardian - show input fields
+              _buildTextFormField(
+                controller: _gsisBeneficiaryFirstNameController,
+                label: 'Guardian First Name',
+                hint: 'Enter guardian\'s first name',
+                isRequired: true,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.-]')),
+                  LengthLimitingTextInputFormatter(100),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              _buildTextFormField(
+                controller: _gsisBeneficiaryMiddleNameController,
+                label: 'Guardian Middle Name',
+                hint: 'Enter guardian\'s middle name (optional)',
+                isRequired: false,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.-]')),
+                  LengthLimitingTextInputFormatter(100),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              _buildTextFormField(
+                controller: _gsisBeneficiaryLastNameController,
+                label: 'Guardian Last Name',
+                hint: 'Enter guardian\'s last name',
+                isRequired: true,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.-]')),
+                  LengthLimitingTextInputFormatter(100),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              _buildDropdownField(
+                label: 'Guardian Suffix',
+                value: _gsisBeneficiarySuffixController.text.isEmpty ? 'None' : _gsisBeneficiarySuffixController.text,
+                items: ['None', 'Jr', 'Sr', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'],
+                onChanged: (value) {
+                  setState(() {
+                    _gsisBeneficiarySuffixController.text = value!;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              _buildDropdownField(
+                label: 'Relationship to Guardian',
+                value: _selectedGsisRelationship,
+                items: ['Father', 'Mother', 'Grandfather', 'Grandmother', 'Brother', 'Sister', 'Friend', 'Colleague', 'Spouse', 'Partner'],
+                onChanged: (value) => setState(() => _selectedGsisRelationship = value!),
+              ),
+            ],
             const SizedBox(height: 16),
             
             _buildDropdownField(
@@ -1122,14 +1321,15 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
             ),
             const SizedBox(height: 16),
             
-            _buildTextFormField(
-              controller: _motherSuffixController,
+            _buildDropdownField(
               label: 'Mother\'s Suffix',
-              hint: 'Jr., Sr., III (optional)',
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z.,\s]')),
-                LengthLimitingTextInputFormatter(20),
-              ],
+              value: _motherSuffixController.text.isEmpty ? 'None' : _motherSuffixController.text,
+              items: ['None', 'Jr', 'Sr', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'],
+              onChanged: (value) {
+                setState(() {
+                  _motherSuffixController.text = value!;
+                });
+              },
             ),
             const SizedBox(height: 16),
             
@@ -1217,14 +1417,15 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
             ),
             const SizedBox(height: 16),                      
             
-            _buildTextFormField(
-              controller: _fatherSuffixController,
+            _buildDropdownField(
               label: 'Father\'s Suffix',
-              hint: 'Jr., Sr., III (optional)',
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z.,\s]')),
-                LengthLimitingTextInputFormatter(20),
-              ],
+              value: _fatherSuffixController.text.isEmpty ? 'None' : _fatherSuffixController.text,
+              items: ['None', 'Jr', 'Sr', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'],
+              onChanged: (value) {
+                setState(() {
+                  _fatherSuffixController.text = value!;
+                });
+              },
             ),
             const SizedBox(height: 16),
             

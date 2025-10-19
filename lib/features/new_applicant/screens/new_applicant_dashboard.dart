@@ -39,8 +39,8 @@ class _NewApplicantDashboardState extends State<NewApplicantDashboard> {
     const NewApplicantHome(),
     const ToSubmitScreen(),
     const GoScanScreen(),
-    const ExamDetailsScreen(),
     const InterviewDetailsScreen(),
+    const ExamDetailsScreen(),  
   ];
 
   @override

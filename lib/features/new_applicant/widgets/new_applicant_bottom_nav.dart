@@ -49,15 +49,15 @@ class NewApplicantBottomNav extends StatelessWidget {
                 isCenter: true,
               ),
               _buildNavItem(
-                icon: Icons.school_outlined,
-                activeIcon: Icons.school,
-                label: 'Exam',
-                index: 3,
-              ),
-              _buildNavItem(
                 icon: Icons.person_search_outlined,
                 activeIcon: Icons.person_search,
                 label: 'Interview',
+                index: 3,
+              ),
+              _buildNavItem(
+                icon: Icons.school_outlined,
+                activeIcon: Icons.school,
+                label: 'Exam',
                 index: 4,
               ),
             ],

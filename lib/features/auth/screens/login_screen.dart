@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -37,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final result = await AuthService.login(
           _emailController.text.trim(),
           _passwordController.text,
+          rememberMe: _rememberMe,
         );
 
         if (mounted) {
@@ -55,13 +57,13 @@ class _LoginScreenState extends State<LoginScreen> {
             );
 
             // Navigate to appropriate dashboard based on user role
-            final userRole = result.user?.role ?? 'New Applicant';
+            final userRole = result.user?.role ?? 'Applicant';
             Widget dashboard;
             
-            if (userRole == 'Scholar') {
-              dashboard = const ScholarDashboard(); // Scholar dashboard
+            if (userRole == 'SPES') {
+              dashboard = const ScholarDashboard(); // SPES dashboard
             } else {
-              dashboard = const NewApplicantDashboard(); // New Applicant dashboard
+              dashboard = const NewApplicantDashboard(); // Applicant dashboard
             }
             
             Navigator.of(context).pushReplacement(
@@ -219,6 +221,29 @@ class _LoginScreenState extends State<LoginScreen> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+                // Remember Me Checkbox
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _rememberMe,
+                      onChanged: (value) {
+                        setState(() {
+                          _rememberMe = value ?? false;
+                        });
+                      },
+                      activeColor: const Color(0xFF2563EB),
+                    ),
+                    Text(
+                      'Remember Me',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 // Forgot Password

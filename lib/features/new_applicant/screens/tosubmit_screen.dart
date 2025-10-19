@@ -180,7 +180,8 @@ class _ToSubmitScreenState extends State<ToSubmitScreen> {
     // Consider these statuses as "complete" (should show as checked)
     final isComplete = status == 'Submitted' || 
                       status == 'Under Review' || 
-                      status == 'Approved';
+                      status == 'Approved' ||
+                      status == 'Completed';
     
     print('Result: $isComplete');
     return isComplete;
@@ -213,7 +214,7 @@ class _ToSubmitScreenState extends State<ToSubmitScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Required documents for your scholarship application',
+                      'Required documents for your SPES application',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 16,

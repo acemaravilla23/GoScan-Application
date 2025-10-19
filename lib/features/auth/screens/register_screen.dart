@@ -79,13 +79,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               );
 
               // Navigate to appropriate dashboard based on user role
-              final userRole = result.user?.role ?? 'New Applicant';
+              final userRole = result.user?.role ?? 'Applicant';
               Widget dashboard;
               
-              if (userRole == 'Scholar') {
-                dashboard = const ScholarDashboard(); // Scholar dashboard
+              if (userRole == 'SPES') {
+                dashboard = const ScholarDashboard(); // SPES dashboard
               } else {
-                dashboard = const NewApplicantDashboard(); // New Applicant dashboard
+                dashboard = const NewApplicantDashboard(); // Applicant dashboard
               }
               
               Navigator.of(context).pushReplacement(

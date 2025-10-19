@@ -16,7 +16,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _currentAvailment = '';
   String _currentStatus = '';
   bool _isProgramCompleted = false;
-  Map<String, dynamic>? _renewalNotice;
+  Map<String, dynamic>? _renewalInfo;
   List<Map<String, dynamic>> _announcements = [];
 
   @override
@@ -46,9 +46,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _currentStatus = response['data']['current_status'] ?? '';
           _isProgramCompleted = response['data']['is_program_completed'] ?? false;
           _analytics = response['data']['analytics'] ?? {};
-          _renewalNotice = response['data']['renewal_notice'];
+          _renewalInfo = response['data']['renewal_info'];
           _isLoading = false;
         });
+        
+        // Debug: Print current availment and renewal info
+        print('Current Availment: "$_currentAvailment"');
+        print('Renewal Info: $_renewalInfo');
+        print('Has Renewal Data: ${_renewalInfo != null && _renewalInfo!['has_renewal'] == true}');
+        print('Will show renewal section: ${(_currentAvailment == '2nd Availment' || _currentAvailment == '3rd Availment' || _currentAvailment == '4th Availment') && _renewalInfo != null && _renewalInfo!['has_renewal'] == true}');
       } else {
         _showError('Failed to load analytics: ${response['message']}');
         setState(() {
@@ -65,7 +71,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadAnnouncements() async {
     try {
-      final response = await ApiService.get('/scholar/announcements');
+      final user = AuthService.currentUser;
+      if (user == null) {
+        print('No user logged in');
+        return;
+      }
+
+      final response = await ApiService.get('/scholar/announcements?email=${Uri.encodeComponent(user.email)}');
       
       if (response['success'] == true) {
         setState(() {
@@ -123,20 +135,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 20),
           ],
           
-          // Renewal Notice (if applicable)
-          if (_renewalNotice != null && _renewalNotice!['show'] == true) ...[
-            _buildRenewalNotice(),
-            const SizedBox(height: 20),
-          ],
+          // Renewal Application Section (only show for 2nd, 3rd, 4th availments AND if renewal dates exist)
+          if ((_currentAvailment == '2nd Availment' || 
+               _currentAvailment == '3rd Availment' || 
+               _currentAvailment == '4th Availment') &&
+              _renewalInfo != null && 
+              _renewalInfo!['has_renewal'] == true)
+            _buildRenewalSection(),
+          const SizedBox(height: 20),
           
           // Scholar Analytics
           Row(
             children: [
               Expanded(
                 child: _buildStatCard(
-                  title: 'No. of Allowance Received',
-                  value: '${_analytics?['allowance_received'] ?? 0}',
-                  icon: Icons.attach_money,
+                  title: 'No. of Deployments',
+                  value: '${_analytics?['deployments_count'] ?? 0}',
+                  icon: Icons.work_outline,
                   color: const Color(0xFF10B981),
                 ),
               ),
@@ -299,7 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       announcementWidgets.add(
         _buildAnnouncementCard(
           title: announcement['title'] ?? 'No Title',
-          content: announcement['description'] ?? 'No Description',
+          content: announcement['content'] ?? 'No Description',
           date: announcement['created_at'] ?? 'No Date',
           isNew: announcement['is_new'] ?? false,
         ),
@@ -405,77 +420,157 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildRenewalNotice() {
-    final noticeType = _renewalNotice!['type'] ?? 'info';
-    Color backgroundColor;
-    Color borderColor;
-    Color iconColor;
-    IconData icon;
-
-    switch (noticeType) {
-      case 'warning':
-        backgroundColor = const Color(0xFFFEF3C7);
-        borderColor = const Color(0xFFF59E0B);
-        iconColor = const Color(0xFFF59E0B);
-        icon = Icons.warning_amber_rounded;
-        break;
-      case 'success':
-        backgroundColor = const Color(0xFFD1FAE5);
-        borderColor = const Color(0xFF10B981);
-        iconColor = const Color(0xFF10B981);
-        icon = Icons.check_circle_rounded;
-        break;
-      default: // info
-        backgroundColor = const Color(0xFFDDEEFF);
-        borderColor = const Color(0xFF3B82F6);
-        iconColor = const Color(0xFF3B82F6);
-        icon = Icons.info_rounded;
-    }
-
+  Widget _buildRenewalSection() {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border.all(color: borderColor, width: 1),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.refresh_rounded,
+                color: Colors.blue[600],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Renewal Application',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_renewalInfo == null)
+            _buildNoRenewalMessage()
+          else if (_renewalInfo!['has_renewal'] == false)
+            _buildNoRenewalMessage()
+          else
+            _buildRenewalDates(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoRenewalMessage() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Row(
         children: [
           Icon(
-            icon,
-            color: iconColor,
-            size: 24,
+            Icons.info_outline,
+            color: Colors.grey[500],
+            size: 18,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _renewalNotice!['title'] ?? 'Notice',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: iconColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _renewalNotice!['message'] ?? '',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13,
-                    color: iconColor.withOpacity(0.8),
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: Text(
+              _renewalInfo?['message'] ?? 'You are in your first availment. Renewal will be available after completion.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRenewalDates() {
+    final renewalDates = List<Map<String, dynamic>>.from(
+      _renewalInfo!['renewal_dates'] ?? []
+    );
+
+    return Column(
+      children: renewalDates.map((renewal) {
+        final status = renewal['status'] ?? 'Closed';
+        final isOpen = status == 'Open';
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isOpen ? Colors.green[50] : Colors.grey[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isOpen ? Colors.green[200]! : Colors.grey[200]!,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isOpen ? Icons.access_time : Icons.schedule,
+                color: isOpen ? Colors.green[600] : Colors.grey[500],
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${renewal['batch']} - ${renewal['district']}',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    Text(
+                      '${renewal['from_date']} - ${renewal['to_date']}',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isOpen ? Colors.green[100] : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: isOpen ? Colors.green[700] : Colors.grey[600],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

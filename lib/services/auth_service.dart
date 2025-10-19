@@ -24,11 +24,12 @@ class AuthService {
   }
 
   // Login
-  static Future<AuthResult> login(String email, String password) async {
+  static Future<AuthResult> login(String email, String password, {bool rememberMe = false}) async {
     try {
       final response = await ApiService.post('/auth/login', {
         'email': email,
         'password': password,
+        'remember_me': rememberMe,
       });
 
       if (response['success'] == true) {
@@ -229,6 +230,8 @@ class User {
   final String lastName;
   final String email;
   final String role;
+  final String status;
+  final DateTime? emailVerifiedAt;
   final DateTime? createdAt;
 
   User({
@@ -237,10 +240,16 @@ class User {
     required this.lastName,
     required this.email,
     required this.role,
+    required this.status,
+    this.emailVerifiedAt,
     this.createdAt,
   });
 
   String get fullName => '$firstName $lastName';
+  bool get isEmailVerified => emailVerifiedAt != null;
+  bool get isActive => status == 'Active';
+  bool get isSpes => role == 'SPES';
+  bool get isApplicant => role == 'Applicant';
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -248,7 +257,11 @@ class User {
       firstName: json['firstname'] ?? '',
       lastName: json['lastname'] ?? '',
       email: json['email'] ?? '',
-      role: json['role'] ?? 'New Applicant',
+      role: json['role'] ?? 'Applicant',
+      status: json['status'] ?? 'Active',
+      emailVerifiedAt: json['email_verified_at'] != null 
+          ? DateTime.parse(json['email_verified_at']) 
+          : null,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at']) 
           : null,
@@ -262,6 +275,8 @@ class User {
       'lastname': lastName,
       'email': email,
       'role': role,
+      'status': status,
+      'email_verified_at': emailVerifiedAt?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
     };
   }

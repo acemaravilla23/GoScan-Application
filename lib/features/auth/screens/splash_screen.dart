@@ -76,10 +76,10 @@ class _SplashScreenState extends State<SplashScreen>
         if (user != null) {
           // User is logged in and token is valid, go to appropriate dashboard
           Widget dashboard;
-          if (user.role == 'Scholar') {
-                dashboard = const ScholarDashboard(); // Scholar dashboard
+          if (user.role == 'SPES') {
+            dashboard = const ScholarDashboard(); // SPES dashboard
           } else {
-            dashboard = const NewApplicantDashboard(); // New Applicant dashboard
+            dashboard = const NewApplicantDashboard(); // Applicant dashboard
           }
           
           Navigator.of(context).pushReplacement(

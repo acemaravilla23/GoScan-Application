@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/scholarship_service.dart';
+import '../../../services/spes_service.dart';
 import 'scholarship_application_form.dart';
 
 class NewApplicantHome extends StatefulWidget {
@@ -11,10 +11,11 @@ class NewApplicantHome extends StatefulWidget {
 }
 
 class _NewApplicantHomeState extends State<NewApplicantHome> {
-  bool _hasOngoingAcademicYear = false;
+  bool _hasOngoingBatch = false;
   bool _isApplicationOpen = false;
-  String _currentAcademicYear = "";
-  String _applicationPeriod = "";
+  String _currentBatch = "";
+  ApplicationDistrict? _localApplication;
+  ApplicationDistrict? _provincialApplication;
   bool _isLoading = true;
   String? _errorMessage;
   bool _hasExistingApplication = false;
@@ -25,42 +26,70 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
   String? _batch;
   String? _applicationMessage;
   ApplicationCheckResult? _applicationDetails;
-  bool _isScholar = false;
+  bool _isSpes = false;
   String? _spesId;
   String? _spesBatch;
-  String? _scholarStatus;
+  String? _spesStatus;
 
   @override
   void initState() {
     super.initState();
-    _checkScholarshipStatus();
+    _checkSpesStatus();
   }
 
-  void _checkScholarshipStatus() async {
+  void _checkSpesStatus() async {
     try {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
       });
 
-      // Get scholarship status and check for existing application
-      final statusFuture = ScholarshipService.getScholarshipStatus();
+      print('=== FLUTTER DEBUG: Checking SPES Status ===');
+      print('User email: ${AuthService.currentUser?.email}');
+
+      // Get SPES status and check for existing application
+      final statusFuture = SpesService.getSpesStatus();
       
       // Get user email for application check
       final user = AuthService.currentUser;
       final userEmail = user?.email ?? '';
       
-      final applicationCheckFuture = ScholarshipService.checkExistingApplication(userEmail);
+      final applicationCheckFuture = SpesService.checkExistingApplication(userEmail);
 
       final results = await Future.wait([statusFuture, applicationCheckFuture]);
-      final status = results[0] as ScholarshipStatus;
+      final status = results[0] as SpesStatus;
       final applicationCheck = results[1] as ApplicationCheckResult;
       
+      print('=== FLUTTER DEBUG: Application Check Results ===');
+      print('Application Status: ${applicationCheck.applicationStatus}');
+      print('Has Application: ${applicationCheck.hasApplication}');
+      print('Is SPES: ${applicationCheck.isSpes}');
+      print('Full Response: ${applicationCheck.toString()}');
+      
+      // Check orientation details specifically
+      if (applicationCheck.orientationDetails != null) {
+        print('=== FLUTTER DEBUG: Orientation Details ===');
+        print('Has Schedule: ${applicationCheck.orientationDetails!['has_schedule']}');
+        if (applicationCheck.orientationDetails!['has_schedule'] == true) {
+          print('Schedule: ${applicationCheck.orientationDetails!['schedule']}');
+          print('Location: ${applicationCheck.orientationDetails!['location']}');
+          print('Building: ${applicationCheck.orientationDetails!['building']}');
+          print('Room: ${applicationCheck.orientationDetails!['room']}');
+          print('District: ${applicationCheck.orientationDetails!['district']}');
+          print('Status: ${applicationCheck.orientationDetails!['status']}');
+        } else {
+          print('Message: ${applicationCheck.orientationDetails!['message']}');
+        }
+      } else {
+        print('=== FLUTTER DEBUG: No Orientation Details Found ===');
+      }
+      
       setState(() {
-        _hasOngoingAcademicYear = status.hasOngoingAcademicYear;
+        _hasOngoingBatch = status.hasOngoingBatch;
         _isApplicationOpen = status.isApplicationOpen;
-        _currentAcademicYear = status.currentAcademicYear ?? "";
-        _applicationPeriod = status.applicationPeriod ?? "";
+        _currentBatch = status.currentBatch ?? "";
+        _localApplication = status.localApplication;
+        _provincialApplication = status.provincialApplication;
         
         if (applicationCheck.isSuccess) {
           _hasExistingApplication = applicationCheck.hasApplication ?? false;
@@ -72,12 +101,12 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
           _applicationMessage = applicationCheck.message;
           _applicationDetails = applicationCheck;
           
-          // Check if user is already a scholar
-          if (applicationCheck.applicationStatus == 'Scholar') {
-            _isScholar = true;
+          // Check if user is already a SPES student
+          if (applicationCheck.applicationStatus == 'SPES' || applicationCheck.isSpes) {
+            _isSpes = true;
             _spesId = applicationCheck.spesId;
             _spesBatch = applicationCheck.spesBatch;
-            _scholarStatus = applicationCheck.scholarStatus;
+            _spesStatus = applicationCheck.spesStatus;
           }
         }
         
@@ -126,52 +155,69 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
             children: [
               // Progress Steps
               _buildProgressStep(
-                title: 'Requirements',
-                description: _applicationDetails?.requirementsStatus == 'Complete' 
-                    ? 'All requirements submitted' 
-                    : 'Submit required documents',
-                isCompleted: _applicationDetails?.requirementsStatus == 'Complete',
-                isActive: _existingApplicationStatus == 'Pending' || _applicationDetails?.requirementsStatus == 'Incomplete',
-              ),
-              _buildProgressStep(
-                title: 'Pending Application',
-                description: _existingApplicationStatus == 'Pending' 
-                    ? 'Your application is being reviewed' 
-                    : 'Application received and approved',
-                isCompleted: _existingApplicationStatus != 'Pending',
-                isActive: _existingApplicationStatus == 'Pending',
-              ),
-              _buildProgressStep(
-                title: 'Examination',
-                description: _applicationDetails?.examDetails?.schedule != null 
-                    ? 'Scheduled: ${_formatDateTime(_applicationDetails!.examDetails!.schedule!)}'
-                    : _existingApplicationStatus == 'Pending'
-                        ? 'Pending application approval'
-                        : _existingApplicationStatus == 'For Examination'
-                            ? 'Waiting for exam schedule'
-                            : 'Pending schedule',
-                isCompleted: _applicationDetails?.examDetails?.results == 'Passed',
-                isActive: _applicationDetails?.examStatus == 'Ongoing' || _existingApplicationStatus == 'For Examination' || _existingApplicationStatus == 'Scheduled Examination',
+                title: 'Application Submitted',
+                description: 'Your application has been received',
+                isCompleted: true,
+                isActive: false,
               ),
               _buildProgressStep(
                 title: 'Interview',
-                description: _applicationDetails?.interviewDetails?.schedule != null 
-                    ? 'Scheduled: ${_formatDateTime(_applicationDetails!.interviewDetails!.schedule!)}'
-                    : _existingApplicationStatus == 'Pending'
-                        ? 'Pending application approval'
-                        : _existingApplicationStatus == 'For Interview'
-                            ? 'Waiting for interview schedule'
-                            : 'Pending schedule',
+                description: _applicationDetails?.interviewDetails?.results != null && _applicationDetails!.interviewDetails!.results != 'Pending'
+                    ? 'Result: ${_applicationDetails!.interviewDetails!.results!}'
+                    : _applicationDetails?.interviewDetails?.schedule != null 
+                        ? 'Scheduled: ${_formatDateTime(_applicationDetails!.interviewDetails!.schedule!)}'
+                        : _existingApplicationStatus == 'Pending'
+                            ? 'Pending application approval'
+                            : _existingApplicationStatus == 'For Interview'
+                                ? 'Waiting for interview schedule'
+                                : 'Pending schedule',
                 isCompleted: _applicationDetails?.interviewDetails?.results == 'Passed',
                 isActive: _applicationDetails?.interviewStatus == 'Ongoing' || _existingApplicationStatus == 'For Interview' || _existingApplicationStatus == 'Scheduled Interview',
+              ),
+              _buildProgressStep(
+                title: 'Examination',
+                description: _applicationDetails?.examDetails?.results != null && _applicationDetails!.examDetails!.results != 'Pending'
+                    ? 'Result: ${_applicationDetails!.examDetails!.results!}'
+                    : _applicationDetails?.examDetails?.schedule != null 
+                        ? 'Scheduled: ${_formatDateTime(_applicationDetails!.examDetails!.schedule!)}'
+                        : _existingApplicationStatus == 'Pending'
+                            ? 'Pending application approval'
+                            : _existingApplicationStatus == 'For Examination'
+                                ? 'Waiting for exam schedule'
+                                : 'Pending schedule',
+                isCompleted: _applicationDetails?.examDetails?.results == 'Passed',
+                isActive: _applicationDetails?.examStatus == 'Ongoing' || _existingApplicationStatus == 'For Examination' || _existingApplicationStatus == 'Scheduled Examination',
               ),
               _buildProgressStep(
                 title: 'Verification',
                 description: 'Final verification and approval',
                 isCompleted: _existingApplicationStatus == 'Approved',
                 isActive: _existingApplicationStatus == 'For Verification',
-                isLast: true,
               ),
+              // Add Orientation step for approved applicants
+              if (_existingApplicationStatus == 'Approved') ...[
+                _buildProgressStep(
+                  title: 'Orientation',
+                  description: _applicationDetails?.orientationDetails != null && _applicationDetails!.orientationDetails!['has_schedule'] == true
+                      ? _applicationDetails!.orientationDetails!['status'] == 'Done'
+                          ? 'Completed'
+                          : _applicationDetails!.orientationDetails!['status'] == 'Ongoing'
+                              ? 'Ongoing'
+                              : 'Scheduled: ${_formatDateTime(_applicationDetails!.orientationDetails!['schedule'])}'
+                      : 'Waiting for orientation schedule',
+                  isCompleted: _applicationDetails?.orientationDetails?['status'] == 'Done',
+                  isActive: _applicationDetails?.orientationDetails?['status'] == 'Pending' || _applicationDetails?.orientationDetails?['status'] == 'Ongoing',
+                  isLast: true,
+                ),
+              ] else ...[
+                _buildProgressStep(
+                  title: 'Verification',
+                  description: 'Final verification and approval',
+                  isCompleted: _existingApplicationStatus == 'Approved',
+                  isActive: _existingApplicationStatus == 'For Verification',
+                  isLast: true,
+                ),
+              ],
             ],
           ),
         ),
@@ -263,11 +309,6 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
         if (examDetails?.location != null) ...[
           const SizedBox(height: 4),
           _buildDetailRow('Location', examDetails!.location!),
-        ],
-        
-        if (examDetails?.building != null && examDetails?.room != null) ...[
-          const SizedBox(height: 4),
-          _buildDetailRow('Venue', '${examDetails!.building}, ${examDetails.room}'),
         ],
         
         if (examDetails?.results != null && examDetails!.results != 'Pending') ...[
@@ -379,6 +420,130 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
     );
   }
 
+  Widget _buildOrientationDetails() {
+    final orientationDetails = _applicationDetails?.orientationDetails;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Orientation Details',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1F2937),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.event,
+                      color: Color(0xFF10B981),
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Orientation Information',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getOrientationStatusColor(orientationDetails?['status']).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      orientationDetails?['status'] ?? 'Pending',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _getOrientationStatusColor(orientationDetails?['status']),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              if (orientationDetails != null && orientationDetails['has_schedule'] == true) ...[
+                _buildDetailRow('Schedule', _formatDateTime(orientationDetails['schedule'])),
+                const SizedBox(height: 8),
+                _buildDetailRow('Location', orientationDetails['location'] ?? 'TBA'),
+                const SizedBox(height: 8),
+                _buildDetailRow('Building', orientationDetails['building'] ?? 'TBA'),
+                const SizedBox(height: 8),
+                _buildDetailRow('Room', orientationDetails['room'] ?? 'TBA'),
+                const SizedBox(height: 8),
+                _buildDetailRow('District', orientationDetails['district'] ?? 'TBA'),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.grey[600],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          orientationDetails?['message'] ?? 'No orientation schedule yet. Please wait for further announcements.',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
       case 'approved':
@@ -438,6 +603,19 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
     }
   }
 
+  Color _getOrientationStatusColor(String? status) {
+    switch (status) {
+      case 'Done':
+        return const Color(0xFF10B981); // Green
+      case 'Ongoing':
+        return const Color(0xFF3B82F6); // Blue
+      case 'Pending':
+        return const Color(0xFFF59E0B); // Yellow
+      default:
+        return const Color(0xFFF59E0B); // Default to yellow
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -454,7 +632,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
             Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'Failed to load scholarship information',
+              'Failed to load SPES information',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 16,
@@ -474,7 +652,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _checkScholarshipStatus,
+              onPressed: _checkSpesStatus,
               child: const Text('Retry'),
             ),
           ],
@@ -490,39 +668,78 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
           const SizedBox(height: 20),
           
           // Academic Year Status
-          if (_hasOngoingAcademicYear) ...[
+          if (_hasOngoingBatch) ...[
             _buildInfoCard(
-              title: 'Current Academic Year',
-              content: _currentAcademicYear,
+              title: 'Current SPES Batch',
+              content: _currentBatch,
               icon: Icons.school,
               color: const Color(0xFF2563EB),
-              subtitle: 'Scholarship applications are being processed',
+              subtitle: 'SPES applications are being processed',
             ),
             const SizedBox(height: 16),
-            _buildInfoCard(
-              title: 'Application Period',
-              content: _isApplicationOpen ? 'Open' : 'Closed',
-              icon: Icons.calendar_today,
-              color: _isApplicationOpen ? const Color(0xFF2563EB) : const Color(0xFFEF4444),
-              subtitle: _applicationPeriod,
-            ),
-            const SizedBox(height: 32),
+            
+            // Local Application Card
+            if (_localApplication != null) ...[
+              _buildInfoCard(
+                title: 'SPES Local Application',
+                content: _localApplication!.isOpen ? 'Open' : 'Closed',
+                icon: Icons.location_city,
+                color: _localApplication!.isOpen ? const Color(0xFF2563EB) : const Color(0xFFEF4444),
+                subtitle: _localApplication!.isOpen 
+                    ? '${_localApplication!.period} (Batch ${_localApplication!.batch})'
+                    : 'Local application period is closed',
+              ),
+              const SizedBox(height: 12),
+            ],
+            
+            // Provincial Application Card
+            if (_provincialApplication != null) ...[
+              _buildInfoCard(
+                title: 'SPES Provincial Application',
+                content: _provincialApplication!.isOpen ? 'Open' : 'Closed',
+                icon: Icons.public,
+                color: _provincialApplication!.isOpen ? const Color(0xFF2563EB) : const Color(0xFFEF4444),
+                subtitle: _provincialApplication!.isOpen 
+                    ? '${_provincialApplication!.period} (Batch ${_provincialApplication!.batch})'
+                    : 'Provincial application period is closed',
+              ),
+              const SizedBox(height: 12),
+            ],
+            
+            // Show message if no applications are available
+            if (_localApplication == null && _provincialApplication == null) ...[
+              _buildInfoCard(
+                title: 'Application Period',
+                content: 'Not Available',
+                icon: Icons.calendar_today,
+                color: const Color(0xFF6B7280),
+                subtitle: 'No application periods are currently set',
+              ),
+              const SizedBox(height: 12),
+            ],
+            
+            const SizedBox(height: 20),
           ] else ...[
             _buildInfoCard(
-              title: 'Academic Year Status',
-              content: 'No Ongoing Academic Year',
+              title: 'SPES Batch Status',
+              content: 'No Ongoing SPES Batch',
               icon: Icons.info,
               color: const Color(0xFFF59E0B),
-              subtitle: 'Please wait for the next academic year to open',
+              subtitle: 'Please wait for the next SPES batch to open',
             ),
             const SizedBox(height: 32),
           ],
           
           // Application Process or Progress
-          if (_isScholar) ...[
+          if (_isSpes) ...[
             _buildCongratulationsCard(),
           ] else if (_hasExistingApplication) ...[
             _buildApplicationProgress(),
+            const SizedBox(height: 24),
+            // Add orientation details for approved applicants
+            if (_existingApplicationStatus == 'Approved') ...[
+              _buildOrientationDetails(),
+            ],
           ] else ...[
             const Text(
               'Application Process',
@@ -550,18 +767,18 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
             ),
             child: Column(
               children: [
-                _buildProcessStep(1, 'Submit Application', 'Fill out the application form with your details', true),
+                _buildProcessStep(1, 'Submit Application', 'Fill out the SPES application form with your details', true),
                 _buildProcessStep(2, 'Document Review', 'Submit required documents for verification', false),
-                _buildProcessStep(3, 'Written Examination', 'Take the scholarship examination', false),
-                _buildProcessStep(4, 'Interview', 'Attend the scholarship interview', false),
-                _buildProcessStep(5, 'Final Approval', 'Wait for final scholarship approval', false),
+                _buildProcessStep(3, 'Interview', 'Attend the SPES interview', false),
+                _buildProcessStep(4, 'Written Examination', 'Take the SPES examination', false),
+                _buildProcessStep(5, 'Final Approval', 'Wait for final SPES approval', false),
               ],
             ),
           ),
           const SizedBox(height: 32),
           
-          // Apply Button or Status Message
-          if (_hasOngoingAcademicYear && _isApplicationOpen) ...[
+          // Apply Buttons or Status Message
+          if (_hasOngoingBatch && (_localApplication?.isOpen == true || _provincialApplication?.isOpen == true)) ...[
             if (_hasExistingApplication) ...[
               // Show status card for existing application
               Container(
@@ -613,28 +830,62 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                 ),
               ),
             ] else ...[
-              // Show apply button for new applications
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    _showApplicationForm();
-                  },
-                  icon: const Icon(Icons.assignment),
-                  label: const Text(
-                    'Apply for Scholarship',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+              // Show apply buttons for new applications
+              Column(
+                children: [
+                  // Local Application Button
+                  if (_localApplication?.isOpen == true) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          _showApplicationForm(district: 'Local');
+                        },
+                        icon: const Icon(Icons.location_city),
+                        label: Text(
+                          'Apply for SPES Local',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          backgroundColor: const Color(0xFF059669),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    backgroundColor: const Color(0xFF2563EB),
-                    foregroundColor: Colors.white,
-                  ),
-                ),
+                    const SizedBox(height: 12),
+                  ],
+                  
+                  // Provincial Application Button
+                  if (_provincialApplication?.isOpen == true) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          _showApplicationForm(district: 'Provincial');
+                        },
+                        icon: const Icon(Icons.public),
+                        label: Text(
+                          'Apply for SPES Provincial',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ] else ...[
@@ -651,9 +902,9 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                   Icon(Icons.info_outline, color: Colors.grey[600], size: 24),
                   const SizedBox(height: 8),
                   Text(
-                    _hasOngoingAcademicYear 
+                    _hasOngoingBatch 
                         ? 'Application period is currently closed'
-                        : 'No ongoing academic year',
+                        : 'No ongoing SPES batch',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 14,
@@ -682,10 +933,10 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
     );
   }
 
-  void _showApplicationForm() {
+  void _showApplicationForm({String? district}) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const ScholarshipApplicationForm(),
+        builder: (context) => ScholarshipApplicationForm(selectedDistrict: district),
       ),
     );
   }
@@ -980,7 +1231,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
               ),
               const SizedBox(height: 20),
               
-              // Scholar Details Card
+              // SPES Details Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -990,13 +1241,13 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                 ),
                 child: Column(
                   children: [
-                    _buildScholarDetailRow('SPES ID', _spesId ?? 'N/A'),
+                    _buildSpesDetailRow('SPES ID', _spesId ?? 'N/A'),
                     const SizedBox(height: 8),
-                    _buildScholarDetailRow('Batch', _spesBatch ?? 'N/A'),
+                    _buildSpesDetailRow('Batch', _spesBatch ?? 'N/A'),
                     const SizedBox(height: 8),
-                    _buildScholarDetailRow('Classification', _classification ?? 'N/A'),
+                    _buildSpesDetailRow('Classification', _classification ?? 'N/A'),
                     const SizedBox(height: 8),
-                    _buildScholarDetailRow('Status', _scholarStatus ?? 'N/A'),
+                    _buildSpesDetailRow('Status', _spesStatus ?? 'N/A'),
                   ],
                 ),
               ),
@@ -1006,7 +1257,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _handleScholarLogout,
+                  onPressed: _handleSpesLogout,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF10B981),
@@ -1022,7 +1273,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                       Icon(Icons.logout, size: 20),
                       SizedBox(width: 8),
                       Text(
-                        'Log out and access Scholar Dashboard',
+                        'Log out and access SPES Dashboard',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 14,
@@ -1040,7 +1291,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
     );
   }
 
-  Widget _buildScholarDetailRow(String label, String value) {
+  Widget _buildSpesDetailRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -1065,7 +1316,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
     );
   }
 
-  void _handleScholarLogout() async {
+  void _handleSpesLogout() async {
     try {
       await AuthService.logout();
       if (mounted) {
