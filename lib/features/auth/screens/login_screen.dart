@@ -154,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Sign in to continue to GoScan',
+                        'Sign in to continue to PESO Bay Laguna',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 16,
@@ -222,50 +222,50 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
-                // Remember Me Checkbox
+                const SizedBox(height: 4),
+                // Remember Me and Forgot Password Row
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Checkbox(
-                      value: _rememberMe,
-                      onChanged: (value) {
-                        setState(() {
-                          _rememberMe = value ?? false;
-                        });
-                      },
-                      activeColor: const Color(0xFF2563EB),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                          activeColor: const Color(0xFF2563EB),
+                        ),
+                        Text(
+                          'Remember Me',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      'Remember Me',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Forgot Password?',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: const Color(0xFF2563EB),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 16),
-                // Forgot Password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ForgotPasswordScreen(),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        color: const Color(0xFF2563EB),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
                 ),
                 const SizedBox(height: 32),
                 // Login Button

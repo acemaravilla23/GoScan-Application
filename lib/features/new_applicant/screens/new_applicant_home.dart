@@ -161,9 +161,17 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                 isActive: false,
               ),
               _buildProgressStep(
+                title: 'Checking of Requirements',
+                description: _existingApplicationStatus != 'Pending'
+                    ? 'Completed'
+                    : 'Submit required documents for verification',
+                isCompleted: _existingApplicationStatus != 'Pending',
+                isActive: _existingApplicationStatus == 'Pending',
+              ),
+              _buildProgressStep(
                 title: 'Interview',
                 description: _applicationDetails?.interviewDetails?.results != null && _applicationDetails!.interviewDetails!.results != 'Pending'
-                    ? 'Result: ${_applicationDetails!.interviewDetails!.results!}'
+                    ? '${_applicationDetails!.interviewDetails!.results!}'
                     : _applicationDetails?.interviewDetails?.schedule != null 
                         ? 'Scheduled: ${_formatDateTime(_applicationDetails!.interviewDetails!.schedule!)}'
                         : _existingApplicationStatus == 'Pending'
@@ -175,9 +183,9 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                 isActive: _applicationDetails?.interviewStatus == 'Ongoing' || _existingApplicationStatus == 'For Interview' || _existingApplicationStatus == 'Scheduled Interview',
               ),
               _buildProgressStep(
-                title: 'Examination',
+                title: 'Written Examination',
                 description: _applicationDetails?.examDetails?.results != null && _applicationDetails!.examDetails!.results != 'Pending'
-                    ? 'Result: ${_applicationDetails!.examDetails!.results!}'
+                    ? '${_applicationDetails!.examDetails!.results!}'
                     : _applicationDetails?.examDetails?.schedule != null 
                         ? 'Scheduled: ${_formatDateTime(_applicationDetails!.examDetails!.schedule!)}'
                         : _existingApplicationStatus == 'Pending'
@@ -190,34 +198,37 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
               ),
               _buildProgressStep(
                 title: 'Verification',
-                description: 'Final verification and approval',
-                isCompleted: _existingApplicationStatus == 'Approved',
+                description: _existingApplicationStatus == 'Contract Signing' || _existingApplicationStatus == 'Approved'
+                    ? 'Verified and Approved'
+                    : _existingApplicationStatus == 'For Verification'
+                        ? 'Under review'
+                        : 'Final verification and approval',
+                isCompleted: _existingApplicationStatus == 'Contract Signing' || _existingApplicationStatus == 'Approved',
                 isActive: _existingApplicationStatus == 'For Verification',
               ),
-              // Add Orientation step for approved applicants
-              if (_existingApplicationStatus == 'Approved') ...[
-                _buildProgressStep(
-                  title: 'Orientation',
-                  description: _applicationDetails?.orientationDetails != null && _applicationDetails!.orientationDetails!['has_schedule'] == true
-                      ? _applicationDetails!.orientationDetails!['status'] == 'Done'
-                          ? 'Completed'
-                          : _applicationDetails!.orientationDetails!['status'] == 'Ongoing'
-                              ? 'Ongoing'
-                              : 'Scheduled: ${_formatDateTime(_applicationDetails!.orientationDetails!['schedule'])}'
-                      : 'Waiting for orientation schedule',
-                  isCompleted: _applicationDetails?.orientationDetails?['status'] == 'Done',
-                  isActive: _applicationDetails?.orientationDetails?['status'] == 'Pending' || _applicationDetails?.orientationDetails?['status'] == 'Ongoing',
-                  isLast: true,
-                ),
-              ] else ...[
-                _buildProgressStep(
-                  title: 'Verification',
-                  description: 'Final verification and approval',
-                  isCompleted: _existingApplicationStatus == 'Approved',
-                  isActive: _existingApplicationStatus == 'For Verification',
-                  isLast: true,
-                ),
-              ],
+              _buildProgressStep(
+                title: 'Contract Signing',
+                description: _existingApplicationStatus == 'Approved'
+                    ? 'Contract Signed'
+                    : _existingApplicationStatus == 'Contract Signing'
+                        ? 'Visit PESO office to sign your SPES contract'
+                        : 'Visit PESO office to sign your SPES contract',
+                isCompleted: _existingApplicationStatus == 'Approved',
+                isActive: _existingApplicationStatus == 'Contract Signing',
+              ),
+              _buildProgressStep(
+                title: 'Orientation',
+                description: _applicationDetails?.orientationDetails != null && _applicationDetails!.orientationDetails!['has_schedule'] == true
+                    ? _applicationDetails!.orientationDetails!['status'] == 'Done'
+                        ? 'Orientation Done'
+                        : _applicationDetails!.orientationDetails!['status'] == 'Ongoing'
+                            ? 'Ongoing'
+                            : 'Scheduled: ${_formatDateTime(_applicationDetails!.orientationDetails!['schedule'])}'
+                    : 'Waiting for orientation schedule',
+                isCompleted: _applicationDetails?.orientationDetails?['status'] == 'Done',
+                isActive: _applicationDetails?.orientationDetails?['status'] == 'Pending' || _applicationDetails?.orientationDetails?['status'] == 'Ongoing',
+                isLast: true,
+              ),
             ],
           ),
         ),
@@ -559,6 +570,10 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
       case 'for examination':
       case 'for interview':
         return const Color(0xFFF59E0B);
+      case 'contract signing':
+        return const Color(0xFF8B5CF6);
+      case 'for verification':
+        return const Color(0xFF059669);
       default:
         return const Color(0xFF6B7280);
     }
@@ -589,6 +604,8 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
         return Icons.person;
       case 'for verification':
         return Icons.verified;
+      case 'contract signing':
+        return Icons.edit_document;
       default:
         return Icons.hourglass_empty;
     }
@@ -678,32 +695,35 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
             ),
             const SizedBox(height: 16),
             
-            // Local Application Card
-            if (_localApplication != null) ...[
-              _buildInfoCard(
-                title: 'SPES Local Application',
-                content: _localApplication!.isOpen ? 'Open' : 'Closed',
-                icon: Icons.location_city,
-                color: _localApplication!.isOpen ? const Color(0xFF2563EB) : const Color(0xFFEF4444),
-                subtitle: _localApplication!.isOpen 
-                    ? '${_localApplication!.period} (Batch ${_localApplication!.batch})'
-                    : 'Local application period is closed',
-              ),
-              const SizedBox(height: 12),
-            ],
-            
-            // Provincial Application Card
-            if (_provincialApplication != null) ...[
-              _buildInfoCard(
-                title: 'SPES Provincial Application',
-                content: _provincialApplication!.isOpen ? 'Open' : 'Closed',
-                icon: Icons.public,
-                color: _provincialApplication!.isOpen ? const Color(0xFF2563EB) : const Color(0xFFEF4444),
-                subtitle: _provincialApplication!.isOpen 
-                    ? '${_provincialApplication!.period} (Batch ${_provincialApplication!.batch})'
-                    : 'Provincial application period is closed',
-              ),
-              const SizedBox(height: 12),
+            // Only show application cards if user hasn't submitted an application yet
+            if (!_hasExistingApplication) ...[
+              // Local Application Card
+              if (_localApplication != null) ...[
+                _buildInfoCard(
+                  title: 'SPES Local Application',
+                  content: _localApplication!.isOpen ? 'Open' : 'Closed',
+                  icon: Icons.location_city,
+                  color: _localApplication!.isOpen ? const Color(0xFF2563EB) : const Color(0xFFEF4444),
+                  subtitle: _localApplication!.isOpen 
+                      ? '${_localApplication!.period} (Batch ${_localApplication!.batch})'
+                      : 'Local application period is closed',
+                ),
+                const SizedBox(height: 12),
+              ],
+              
+              // Provincial Application Card
+              if (_provincialApplication != null) ...[
+                _buildInfoCard(
+                  title: 'SPES Provincial Application',
+                  content: _provincialApplication!.isOpen ? 'Open' : 'Closed',
+                  icon: Icons.public,
+                  color: _provincialApplication!.isOpen ? const Color(0xFF2563EB) : const Color(0xFFEF4444),
+                  subtitle: _provincialApplication!.isOpen 
+                      ? '${_provincialApplication!.period} (Batch ${_provincialApplication!.batch})'
+                      : 'Provincial application period is closed',
+                ),
+                const SizedBox(height: 12),
+              ],
             ],
             
             // Show message if no applications are available
@@ -768,10 +788,12 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
             child: Column(
               children: [
                 _buildProcessStep(1, 'Submit Application', 'Fill out the SPES application form with your details', true),
-                _buildProcessStep(2, 'Document Review', 'Submit required documents for verification', false),
+                _buildProcessStep(2, 'Checking of Requirements', 'Submit required documents for verification', false),
                 _buildProcessStep(3, 'Interview', 'Attend the SPES interview', false),
                 _buildProcessStep(4, 'Written Examination', 'Take the SPES examination', false),
-                _buildProcessStep(5, 'Final Approval', 'Wait for final SPES approval', false),
+                _buildProcessStep(5, 'Verification', 'Final verification and approval', false),
+                _buildProcessStep(6, 'Contract Signing', 'Visit PESO office to sign your SPES contract', false),
+                _buildProcessStep(7, 'Orientation', 'Attend the SPES orientation program', false),
               ],
             ),
           ),
@@ -829,8 +851,8 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                   ],
                 ),
               ),
-            ] else ...[
-              // Show apply buttons for new applications
+            ] else if (!_hasExistingApplication) ...[
+              // Show apply buttons for new applications (only if no existing application)
               Column(
                 children: [
                   // Local Application Button
@@ -1176,15 +1198,12 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[300]!),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF10B981).withOpacity(0.3),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
               ),
@@ -1196,24 +1215,24 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: const Color(0xFF2563EB).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Icon(
                   Icons.celebration,
                   size: 40,
-                  color: Colors.white,
+                  color: Color(0xFF2563EB),
                 ),
               ),
               const SizedBox(height: 20),
               
               const Text(
-                'Welcome to PESO Bay Laguna!',
+                'Congratulations you are now part of the SPES Program in PESO Bay Laguna',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Color(0xFF1F2937),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -1224,7 +1243,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                 style: const TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16,
-                  color: Colors.white,
+                  color: Color(0xFF1F2937),
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -1236,8 +1255,9 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.grey[50],
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
                 ),
                 child: Column(
                   children: [
@@ -1259,8 +1279,8 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
                 child: ElevatedButton(
                   onPressed: _handleSpesLogout,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF10B981),
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1300,7 +1320,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
           style: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 14,
-            color: Colors.white70,
+            color: Color(0xFF6B7280),
           ),
         ),
         Text(
@@ -1309,7 +1329,7 @@ class _NewApplicantHomeState extends State<NewApplicantHome> {
             fontFamily: 'Inter',
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Color(0xFF1F2937),
           ),
         ),
       ],

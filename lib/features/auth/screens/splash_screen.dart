@@ -248,7 +248,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         SizedBox(height: 8),
                         Text(
-                          'Document Scanner & Manager',
+                          'Document Scanner for PESO Bay Laguna',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 16,

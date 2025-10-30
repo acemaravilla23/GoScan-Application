@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:goscan_app/features/goscan/screens/document_type_selection_screen.dart';
 
 class GoScanScreen extends StatelessWidget {
   const GoScanScreen({super.key});
@@ -69,7 +70,7 @@ class GoScanScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tap the camera button to start scanning documents',
+                        'Choose document type and start scanning',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 14,
@@ -80,12 +81,21 @@ class GoScanScreen extends StatelessWidget {
                       const SizedBox(height: 32),
                       ElevatedButton(
                         onPressed: () {
-                          // TODO: Implement camera functionality
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const DocumentTypeSelectionScreen(),
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 32,
                             vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child: const Text(

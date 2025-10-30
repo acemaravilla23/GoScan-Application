@@ -193,31 +193,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
         actions: [
           TextButton(
             onPressed: () async {
-              // Close dialog first, then show snackbar
-              Navigator.of(context).pop();
+              // Show loading state
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
               
               // Resend verification email
               final result = await AuthService.resendVerification(_emailController.text);
-              if (result.isSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(result.message ?? 'Verification email sent again'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(result.error ?? 'Failed to send email'),
-                    backgroundColor: Colors.red,
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              }
               
-              // Show dialog again
-              _showEmailVerificationDialog('Email verification resent! Please check your email.');
+              // Close loading dialog
+              Navigator.of(context).pop();
+              
+              if (result.isSuccess) {
+                // Show success modal
+                _showResendSuccessDialog();
+              } else {
+                // Show error modal
+                _showResendErrorDialog(result.error ?? 'Failed to send email');
+              }
             },
             child: const Text(
               'Resend Email',
@@ -249,6 +246,190 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  void _showResendSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              color: Colors.green[600],
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Email Sent!',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Verification email sent successfully!',
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Please check your email and click the verification link to complete your registration.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close success dialog
+                Navigator.of(context).pop(); // Close original verification dialog
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResendErrorDialog(String errorMessage) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Colors.red[600],
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Failed to Send',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Unable to resend verification email.',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorMessage,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Please try again or contact support if the problem persists.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close error dialog
+            },
+            child: const Text(
+              'Try Again',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: Color(0xFF2563EB),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close error dialog
+              Navigator.of(context).pop(); // Close original verification dialog
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
@@ -260,14 +441,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1F2937)),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -313,7 +486,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Join GoScan and start scanning documents',
+                        'Join PESO Bay Laguna and start your SPES journey',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 16,
@@ -324,67 +497,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Name Fields
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _firstNameController,
-                        keyboardType: TextInputType.name,
-                        textCapitalization: TextCapitalization.words,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                          LengthLimitingTextInputFormatter(50),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'First Name',
-                          hintText: 'Enter your first name',
-                          prefixIcon: Icon(Icons.person_outlined),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your first name';
-                          }
-                          if (value.trim().length < 2) {
-                            return 'First name must be at least 2 characters';
-                          }
-                          if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-                            return 'First name can only contain letters';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _lastNameController,
-                        keyboardType: TextInputType.name,
-                        textCapitalization: TextCapitalization.words,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                          LengthLimitingTextInputFormatter(50),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Last Name',
-                          hintText: 'Enter your last name',
-                          prefixIcon: Icon(Icons.person_outlined),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your last name';
-                          }
-                          if (value.trim().length < 2) {
-                            return 'Last name must be at least 2 characters';
-                          }
-                          if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-                            return 'Last name can only contain letters';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
+                // First Name Field
+                TextFormField(
+                  controller: _firstNameController,
+                  keyboardType: TextInputType.name,
+                  textCapitalization: TextCapitalization.words,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                    LengthLimitingTextInputFormatter(50),
                   ],
+                  decoration: const InputDecoration(
+                    labelText: 'First Name',
+                    hintText: 'Enter your first name',
+                    prefixIcon: Icon(Icons.person_outlined),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your first name';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'First name must be at least 2 characters';
+                    }
+                    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                      return 'First name can only contain letters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                // Last Name Field
+                TextFormField(
+                  controller: _lastNameController,
+                  keyboardType: TextInputType.name,
+                  textCapitalization: TextCapitalization.words,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                    LengthLimitingTextInputFormatter(50),
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: 'Last Name',
+                    hintText: 'Enter your last name',
+                    prefixIcon: Icon(Icons.person_outlined),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your last name';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'Last name must be at least 2 characters';
+                    }
+                    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                      return 'Last name can only contain letters';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 20),
                 // Email Field
@@ -438,11 +604,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
                     }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
+                    
+                    // Check minimum length
+                    if (value.length < 8) {
+                      return 'Password must be at least 8 characters';
                     }
+                    
+                    // Check for uppercase letter
+                    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                      return 'Password must contain at least 1 uppercase letter';
+                    }
+                    
+                    // Check for lowercase letter
+                    if (!RegExp(r'[a-z]').hasMatch(value)) {
+                      return 'Password must contain at least 1 lowercase letter';
+                    }
+                    
+                    // Check for special character
+                    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                      return 'Password must contain at least 1 special character';
+                    }
+                    
                     return null;
                   },
+                ),
+                // Password Requirements Hint
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, top: 8),
+                  child: Text(
+                    'Password must contain: at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 special character',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 // Confirm Password Field

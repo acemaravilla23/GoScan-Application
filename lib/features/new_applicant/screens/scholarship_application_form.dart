@@ -1139,23 +1139,14 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
                 color: Color(0xFF1F2937),
               ),
             ),
-            const SizedBox(height: 12),
-            
-            // GSIS Beneficiary Selection
-            _buildDropdownField(
-              label: 'GSIS Beneficiary',
-              value: _selectedGsisBeneficiary,
-              items: ['Father', 'Mother', 'Guardian'],
-              onChanged: (value) => setState(() => _selectedGsisBeneficiary = value!),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),          
             
             // Show GSIS beneficiary info based on selection
             if (_selectedGsisBeneficiary == 'Father') ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: Colors.blue[50], 
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue[200]!),
                 ),
@@ -1165,7 +1156,7 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'GSIS Beneficiary will be set to Father information above',
+                        'GSIS Beneficiary will be set to Father information below',
                         style: TextStyle(
                           color: Colors.blue[800],
                           fontSize: 14,
@@ -1180,19 +1171,19 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.pink[50],
+                  color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.pink[200]!),
+                  border: Border.all(color: Colors.blue[200]!),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.pink[600], size: 20),
+                    Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'GSIS Beneficiary will be set to Mother information above',
+                        'GSIS Beneficiary will be set to Mother information below',
                         style: TextStyle(
-                          color: Colors.pink[800],
+                          color: Colors.blue[800],
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1261,6 +1252,15 @@ class _ScholarshipApplicationFormState extends State<ScholarshipApplicationForm>
                 onChanged: (value) => setState(() => _selectedGsisRelationship = value!),
               ),
             ],
+            const SizedBox(height: 16),
+
+            // GSIS Beneficiary Selection
+            _buildDropdownField(
+              label: 'GSIS Beneficiary',
+              value: _selectedGsisBeneficiary,
+              items: ['Father', 'Mother', 'Guardian'],
+              onChanged: (value) => setState(() => _selectedGsisBeneficiary = value!),
+            ),
             const SizedBox(height: 16),
             
             _buildDropdownField(
